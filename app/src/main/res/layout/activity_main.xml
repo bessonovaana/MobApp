@@ -147,9 +147,10 @@
         style="@style/buttonRow">
 
         <Button
-            android:id="@+id/b_d"
+            android:id="@+id/b_b"
             style="@style/buttonNumber"
-            android:text="." />
+            android:text="back"
+            android:textSize="10pt"/>
         <Button
             android:id="@+id/b_0"
             style="@style/buttonNumber"

@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
@@ -36,7 +37,7 @@ class MainActivity : AppCompatActivity() {
         val buttonClear: Button =findViewById(R.id.b_AC)
         val buttonMultiply: Button = findViewById(R.id.b_um)
         val buttonDevid: Button =findViewById(R.id.b_del)
-        val buttonDot: Button =findViewById(R.id.b_d)
+        val buttonBack: Button =findViewById(R.id.b_b)
 
         button1.setOnClickListener {
             working.append("1")
@@ -96,10 +97,9 @@ class MainActivity : AppCompatActivity() {
             working.append("*")
             canAddOperation=false
         }
-        buttonDot.setOnClickListener {
-                working.append(".")
-                canAddOperation=false
-
+        buttonBack.setOnClickListener{
+            val intent = Intent(this, MenuActivity::class.java)
+            startActivity(intent)
         }
 
         buttonClear.setOnClickListener {
