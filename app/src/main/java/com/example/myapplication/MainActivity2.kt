@@ -1,15 +1,20 @@
 package com.example.myapplication
 
 import android.annotation.SuppressLint
+import android.content.ContentUris
 import android.content.Intent
+import android.database.Cursor
 import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.MediaStore
 import android.widget.Button
 import android.widget.SeekBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import java.io.IOException
@@ -36,11 +41,16 @@ class MainActivity2 : AppCompatActivity() {
         }
     }
 
-    private val songList = listOf(
-        R.raw.sidim_s_bobrom to "Sidim s bobrom",
-        R.raw.sigma_boy to "Sigma Boy"
-    )
+    private val songList = mutableListOf<Song>()
     private var songIndex = 0
+
+    data class Song(
+        val id: Long,
+        val title: String,
+        val artist: String,
+        val duration: Long,
+        val uri: Uri
+    )
 
     @SuppressLint("UnsafeIntentLaunch")
     @RequiresApi(Build.VERSION_CODES.O)
@@ -49,14 +59,59 @@ class MainActivity2 : AppCompatActivity() {
         setContentView(R.layout.activity_main2)
 
         initViews()
-        setupMediaPlayer()
-        setupListeners()
-        setupVolumeControl()
+        loadSongsFromStorage()
+        if (songList.isNotEmpty()) {
+            setupMediaPlayer()
+            setupListeners()
+            setupVolumeControl()
+        } else {
+            Toast.makeText(this, "No music found on device", Toast.LENGTH_LONG).show()
+        }
 
         val back: Button = findViewById(R.id.button4)
         back.setOnClickListener {
             intent = Intent(this, MenuActivity::class.java)
             startActivity(intent)
+        }
+    }
+
+    private fun loadSongsFromStorage() {
+        val projection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.DATA
+        )
+
+        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+
+        val cursor: Cursor? = contentResolver.query(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            selection,
+            null,
+            MediaStore.Audio.Media.TITLE + " ASC"
+        )
+
+        cursor?.use {
+            val idColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+            val titleColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
+            val artistColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+            val durationColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+
+            while (it.moveToNext()) {
+                val id = it.getLong(idColumn)
+                val title = it.getString(titleColumn)
+                val artist = it.getString(artistColumn)
+                val duration = it.getLong(durationColumn)
+                val uri = ContentUris.withAppendedId(
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                    id
+                )
+
+                songList.add(Song(id, title, artist, duration, uri))
+            }
         }
     }
 
@@ -72,6 +127,7 @@ class MainActivity2 : AppCompatActivity() {
                 setVolume(currentVolume)
                 updateVolumeText()
             }
+
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
@@ -108,22 +164,19 @@ class MainActivity2 : AppCompatActivity() {
 
     private fun playSong(index: Int) {
         try {
-            val (songResId, title) = songList[index]
-            val afd = resources.openRawResourceFd(songResId)
-
+            val song = songList[index]
             mediaPlayer.reset()
-            mediaPlayer.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+            mediaPlayer.setDataSource(applicationContext, song.uri)
             mediaPlayer.prepareAsync()
 
             mediaPlayer.setOnPreparedListener {
-                songTitle.text = title
+                songTitle.text = "${song.title} - ${song.artist}"
                 seekBar.progress = 0
                 playMusic()
             }
-
-            afd.close()
         } catch (e: IOException) {
             e.printStackTrace()
+            Toast.makeText(this, "Error playing song", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -190,11 +243,13 @@ class MainActivity2 : AppCompatActivity() {
     }
 
     private fun nextSong() {
+        if (songList.isEmpty()) return
         songIndex = (songIndex + 1) % songList.size
         playSong(songIndex)
     }
 
     private fun previousSong() {
+        if (songList.isEmpty()) return
         songIndex = if (songIndex == 0) songList.size - 1 else songIndex - 1
         playSong(songIndex)
     }
