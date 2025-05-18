@@ -5,7 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".menu"
+    tools:context=".MenuActivity"
     android:background="@color/black"
     android:layout_gravity="center">
 
@@ -13,10 +13,11 @@
         android:id="@+id/Calcul"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="292dp"
+        android:layout_marginTop="248dp"
         android:gravity="center"
         android:text="Calculator"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.489"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -30,4 +31,16 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/Calcul" />
+
+    <Button
+        android:id="@+id/gps"
+        android:layout_width="119dp"
+        android:layout_height="44dp"
+        android:gravity="center"
+        android:text="GPS"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/mp3"
+        app:layout_constraintVertical_bias="0.118" />
 </androidx.constraintlayout.widget.ConstraintLayout>

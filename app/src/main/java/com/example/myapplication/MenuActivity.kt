@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
@@ -10,6 +11,7 @@ import androidx.core.view.WindowInsetsCompat
 
 
 class MenuActivity : AppCompatActivity() {
+    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -22,6 +24,7 @@ class MenuActivity : AppCompatActivity() {
         }
         val button_cal: Button =findViewById(R.id.Calcul)
         val button_mp3: Button=findViewById(R.id.mp3)
+        val button_gps: Button=findViewById(R.id.gps)
 
         button_cal.setOnClickListener{
             val intent = Intent(this, MainActivity::class.java)
@@ -29,6 +32,10 @@ class MenuActivity : AppCompatActivity() {
         }
         button_mp3.setOnClickListener{
             val intent = Intent(this, MainActivity2::class.java)
+            startActivity(intent)
+        }
+        button_gps.setOnClickListener {
+            val intent = Intent(this, GPSActivity::class.java)
             startActivity(intent)
         }
     }
