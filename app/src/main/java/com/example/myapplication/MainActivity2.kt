@@ -1,48 +1,42 @@
 package com.example.myapplication
 
-import android.annotation.SuppressLint
-import android.content.ContentUris
+import android.Manifest
 import android.content.Intent
-import android.database.Cursor
+import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import android.widget.Button
 import android.widget.SeekBar
+import android.widget.SeekBar.OnSeekBarChangeListener
 import android.widget.TextView
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import java.io.IOException
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import java.util.concurrent.TimeUnit
 
 class MainActivity2 : AppCompatActivity() {
 
-    private lateinit var mediaPlayer: MediaPlayer
+    private val REQUEST_READ_STORAGE = 101
     private lateinit var seekBar: SeekBar
-    private lateinit var playButton: Button
-    private lateinit var songTitle: TextView
     private lateinit var volumeSeekBar: SeekBar
-    private var currentVolume = 1.0f
+    private lateinit var PlPsBtn: Button
+    private lateinit var nextBtn: Button
+    private lateinit var backBtn: Button
+    private lateinit var songTitle: TextView
+    private lateinit var currentTimeView: TextView
     private lateinit var volumeTextView: TextView
-    private lateinit var currentTimeTextView: TextView
 
+    private lateinit var mplayer: MediaPlayer
+    private lateinit var audioManager: AudioManager
     private val handler = Handler(Looper.getMainLooper())
-
-    private val updateSeekBar = object : Runnable {
-        override fun run() {
-            updateProgress()
-            updateCurrentTime()
-            handler.postDelayed(this, 1000)
-        }
-    }
-
-    private val songList = mutableListOf<Song>()
-    private var songIndex = 0
+    private val songsList = mutableListOf<Song>()
+    private var SongIndex = 0
 
     data class Song(
         val id: Long,
@@ -52,80 +46,58 @@ class MainActivity2 : AppCompatActivity() {
         val uri: Uri
     )
 
-    @SuppressLint("UnsafeIntentLaunch")
-    @RequiresApi(Build.VERSION_CODES.O)
+    private val updateSeekBar = object : Runnable {
+        override fun run() {
+            updateProgress()
+            updateCurrentTime()
+            handler.postDelayed(this, 1000)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main2)
+        val button_b: Button=findViewById(R.id.button4)
 
-        initViews()
-        loadSongsFromStorage()
-        if (songList.isNotEmpty()) {
-            setupMediaPlayer()
-            setupListeners()
-            setupVolumeControl()
-        } else {
-            Toast.makeText(this, "No music found on device", Toast.LENGTH_LONG).show()
-        }
-
-        val back: Button = findViewById(R.id.button4)
-        back.setOnClickListener {
-            intent = Intent(this, MenuActivity::class.java)
+        button_b.setOnClickListener{
+            val intent = Intent(this, MenuActivity::class.java)
             startActivity(intent)
         }
+        initViews()
+        setupAudioManager()
+        Permissions()
     }
 
-    private fun loadSongsFromStorage() {
-        val projection = arrayOf(
-            MediaStore.Audio.Media._ID,
-            MediaStore.Audio.Media.TITLE,
-            MediaStore.Audio.Media.ARTIST,
-            MediaStore.Audio.Media.DURATION,
-            MediaStore.Audio.Media.DATA
-        )
-
-        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
-
-        val cursor: Cursor? = contentResolver.query(
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-            projection,
-            selection,
-            null,
-            MediaStore.Audio.Media.TITLE + " ASC"
-        )
-
-        cursor?.use {
-            val idColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
-            val titleColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
-            val artistColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
-            val durationColumn = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
-
-            while (it.moveToNext()) {
-                val id = it.getLong(idColumn)
-                val title = it.getString(titleColumn)
-                val artist = it.getString(artistColumn)
-                val duration = it.getLong(durationColumn)
-                val uri = ContentUris.withAppendedId(
-                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                    id
-                )
-
-                songList.add(Song(id, title, artist, duration, uri))
-            }
-        }
-    }
-
-    private fun setupVolumeControl() {
+    private fun initViews() {
+        seekBar = findViewById(R.id.seekBar)
         volumeSeekBar = findViewById(R.id.voluem)
-        volumeSeekBar.max = 100
-        volumeSeekBar.progress = (currentVolume * 100).toInt()
-        updateVolumeText()
+        PlPsBtn = findViewById(R.id.b_play)
+        nextBtn = findViewById(R.id.next)
+        backBtn = findViewById(R.id.Prev)
+        songTitle = findViewById(R.id.textView)
+        currentTimeView = findViewById(R.id.time)
+        volumeTextView = findViewById(R.id.sound)
 
-        volumeSeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+        PlPsBtn.setOnClickListener { PlPs() }
+        nextBtn.setOnClickListener { nextSong() }
+        backBtn.setOnClickListener { backSong() }
+
+        seekBar.setOnSeekBarChangeListener(createSeekBarListener())
+    }
+
+    private fun setupAudioManager() {
+        audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+
+        volumeSeekBar.max = maxVolume
+        volumeSeekBar.progress = currentVolume
+        updateVolumeText(currentVolume)
+
+        volumeSeekBar.setOnSeekBarChangeListener(object : OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                currentVolume = progress / 100f
-                setVolume(currentVolume)
-                updateVolumeText()
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, progress, 0)
+                updateVolumeText(progress)
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
@@ -133,88 +105,16 @@ class MainActivity2 : AppCompatActivity() {
         })
     }
 
-    @SuppressLint("SetTextI18n")
-    private fun updateVolumeText() {
-        volumeTextView.text = "${(currentVolume * 100).toInt()}%"
+    private fun updateVolumeText(volume: Int) {
+        val percentage = (volume * 100) / volumeSeekBar.max
+        volumeTextView.text = "$percentage%"
     }
 
-    @SuppressLint("SetTextI18n")
-    private fun updateCurrentTime() {
-        if (::mediaPlayer.isInitialized && mediaPlayer.duration > 0) {
-            val currentPosition = mediaPlayer.currentPosition
-            val minutes = TimeUnit.MILLISECONDS.toMinutes(currentPosition.toLong())
-            val seconds = TimeUnit.MILLISECONDS.toSeconds(currentPosition.toLong()) -
-                    TimeUnit.MINUTES.toSeconds(minutes)
-            currentTimeTextView.text = String.format("%02d:%02d", minutes, seconds)
-        }
-    }
-
-    private fun setVolume(volume: Float) {
-        if (::mediaPlayer.isInitialized) {
-            mediaPlayer.setVolume(volume, volume)
-        }
-    }
-
-    private fun updateProgress() {
-        if (mediaPlayer.isPlaying && mediaPlayer.duration > 0) {
-            val progress = (mediaPlayer.currentPosition * 100) / mediaPlayer.duration
-            seekBar.progress = progress
-        }
-    }
-
-    private fun playSong(index: Int) {
-        try {
-            val song = songList[index]
-            mediaPlayer.reset()
-            mediaPlayer.setDataSource(applicationContext, song.uri)
-            mediaPlayer.prepareAsync()
-
-            mediaPlayer.setOnPreparedListener {
-                songTitle.text = "${song.title} - ${song.artist}"
-                seekBar.progress = 0
-                playMusic()
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
-            Toast.makeText(this, "Error playing song", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun initViews() {
-        seekBar = findViewById<SeekBar>(R.id.seekBar).apply {
-            max = 100
-            min = 0
-            progress = 0
-            setOnSeekBarChangeListener(createSeekBar())
-        }
-
-        volumeTextView = findViewById(R.id.sound)
-        currentTimeTextView = findViewById(R.id.time)
-        playButton = findViewById<Button>(R.id.b_play)
-        songTitle = findViewById<TextView>(R.id.textView)
-    }
-
-    private fun setupMediaPlayer() {
-        mediaPlayer = MediaPlayer()
-        playSong(songIndex)
-    }
-
-    private fun setupListeners() {
-        playButton.setOnClickListener {
-            if (mediaPlayer.isPlaying) pauseMusic() else playMusic()
-        }
-
-        findViewById<Button>(R.id.next).setOnClickListener { nextSong() }
-        findViewById<Button>(R.id.Prev).setOnClickListener { previousSong() }
-    }
-
-    private fun createSeekBar() = object : SeekBar.OnSeekBarChangeListener {
+    private fun createSeekBarListener() = object : OnSeekBarChangeListener {
         override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-            if (fromUser && mediaPlayer.duration > 0) {
-                val newPosition = (progress * mediaPlayer.duration) / 100
-                mediaPlayer.seekTo(newPosition)
-                updateCurrentTime()
+            if (fromUser && ::mplayer.isInitialized && mplayer.duration > 0) {
+                val newPosition = (progress * mplayer.duration) / 100
+                mplayer.seekTo(newPosition)
             }
         }
 
@@ -227,36 +127,190 @@ class MainActivity2 : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("SetTextI18n")
+    private fun updateProgress() {
+        if (::mplayer.isInitialized && mplayer.isPlaying && mplayer.duration > 0) {
+            val progress = (mplayer.currentPosition * 100) / mplayer.duration
+            seekBar.progress = progress
+        }
+    }
+
+    private fun updateCurrentTime() {
+        if (::mplayer.isInitialized && mplayer.duration > 0) {
+            val currentPos = mplayer.currentPosition
+            currentTimeView.text = formatTime(currentPos)
+        }
+    }
+
+    private fun formatTime(millis: Int): String {
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(millis.toLong())
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(millis.toLong()) -
+                TimeUnit.MINUTES.toSeconds(minutes)
+        return String.format("%02d:%02d", minutes, seconds)
+    }
+
+    private fun Permissions() {
+        val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_AUDIO
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+
+        if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
+                Toast.makeText(this, "Для воспроизведения музыки нужно разрешение на чтение файлов",
+                    Toast.LENGTH_LONG).show()
+            }
+            ActivityCompat.requestPermissions(this, arrayOf(permission), REQUEST_READ_STORAGE)
+        } else {
+            loadSongs()
+            setupMedia()
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_READ_STORAGE && grantResults.isNotEmpty()) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                loadSongs()
+                setupMedia()
+            } else {
+                Toast.makeText(this, "Для воспроизведения музыки нужно разрешение",
+                    Toast.LENGTH_LONG).show()
+                finish()
+            }
+        }
+    }
+
+    private fun loadSongs() {
+        val projection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.DATA
+        )
+
+        contentResolver.query(
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            projection,
+            "${MediaStore.Audio.Media.IS_MUSIC} != 0",
+            null,
+            "${MediaStore.Audio.Media.TITLE} ASC"
+        )?.use { cursor ->
+            songsList.clear()
+            while (cursor.moveToNext()) {
+                songsList.add(
+                    Song(
+                        cursor.getLong(0),
+                        cursor.getString(1),
+                        cursor.getString(2),
+                        cursor.getLong(3),
+                        Uri.withAppendedPath(
+                            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                            cursor.getLong(0).toString()
+                        )
+                    )
+                )
+            }
+        }
+
+        if (songsList.isEmpty()) {
+            Toast.makeText(this, "Нет музыки для воспроизведения", Toast.LENGTH_LONG).show()
+            finish()
+        }
+    }
+
+    private fun setupMedia() {
+        mplayer = MediaPlayer().apply {
+            setAudioStreamType(AudioManager.STREAM_MUSIC)
+            setOnPreparedListener {
+                PlPsBtn.isEnabled = true
+                playMusic()
+            }
+            setOnCompletionListener {
+                nextSong()
+            }
+        }
+        playSong(SongIndex)
+    }
+
+    private fun playSong(index: Int) {
+        try {
+            mplayer.reset()
+            mplayer.setDataSource(this, songsList[index].uri)
+            mplayer.prepareAsync()
+
+            with(songsList[index]) {
+                songTitle.text = "$title - $artist"
+            }
+            seekBar.progress = 0
+            PlPsBtn.isEnabled = false
+        } catch (e: Exception) {
+            Toast.makeText(this, "Ошибка воспроизведения: ${e.localizedMessage}",
+                Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun PlPs() {
+        if (mplayer.isPlaying) pauseMusic() else playMusic()
+    }
+
     private fun playMusic() {
-        mediaPlayer.start()
-        setVolume(currentVolume)
-        playButton.text = "Stop"
+        mplayer.start()
+        PlPsBtn.text = "Pause"
         handler.post(updateSeekBar)
     }
 
-    @SuppressLint("SetTextI18n")
     private fun pauseMusic() {
-        mediaPlayer.pause()
-        playButton.text = "Play"
+        mplayer.pause()
+        PlPsBtn.text = "Play"
         handler.removeCallbacks(updateSeekBar)
+        if (::mplayer.isInitialized && mplayer.isPlaying) {
+            mplayer.pause()
+        }
     }
 
     private fun nextSong() {
-        if (songList.isEmpty()) return
-        songIndex = (songIndex + 1) % songList.size
-        playSong(songIndex)
+        SongIndex = (SongIndex + 1) % songsList.size
+        playSong(SongIndex)
     }
 
-    private fun previousSong() {
-        if (songList.isEmpty()) return
-        songIndex = if (songIndex == 0) songList.size - 1 else songIndex - 1
-        playSong(songIndex)
+    private fun backSong() {
+        SongIndex = if (SongIndex == 0) songsList.size - 1 else SongIndex - 1
+        playSong(SongIndex)
+    }
+    override fun onPause() {
+        super.onPause()
+        // Пауза при сворачивании приложения
+        if (::mplayer.isInitialized && mplayer.isPlaying) {
+            mplayer.pause()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Возобновление при возврате в приложение (если нужно)
+        if (::mplayer.isInitialized && !mplayer.isPlaying && PlPsBtn.text == "Pause") {
+            mplayer.start()
+            handler.post(updateSeekBar)
+        }
     }
 
     override fun onStop() {
         super.onStop()
+        // Остановка при выходе из приложения
+        if (::mplayer.isInitialized) {
+            mplayer.stop()
+            handler.removeCallbacks(updateSeekBar)
+        }
+    }
+    override fun onDestroy() {
         handler.removeCallbacks(updateSeekBar)
-        mediaPlayer.release()
+        if (::mplayer.isInitialized) mplayer.release()
+        super.onDestroy()
     }
 }
