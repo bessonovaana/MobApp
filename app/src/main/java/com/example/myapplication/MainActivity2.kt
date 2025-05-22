@@ -285,7 +285,7 @@ class MainActivity2 : AppCompatActivity() {
     }
     override fun onPause() {
         super.onPause()
-        // Пауза при сворачивании приложения
+
         if (::mplayer.isInitialized && mplayer.isPlaying) {
             mplayer.pause()
         }
@@ -293,7 +293,7 @@ class MainActivity2 : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Возобновление при возврате в приложение (если нужно)
+
         if (::mplayer.isInitialized && !mplayer.isPlaying && PlPsBtn.text == "Pause") {
             mplayer.start()
             handler.post(updateSeekBar)
@@ -302,7 +302,6 @@ class MainActivity2 : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Остановка при выходе из приложения
         if (::mplayer.isInitialized) {
             mplayer.stop()
             handler.removeCallbacks(updateSeekBar)

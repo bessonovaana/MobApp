@@ -8,6 +8,8 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.widget.Button
 import android.widget.TextView
@@ -16,7 +18,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import org.json.JSONObject
 import java.io.File
 import java.io.FileWriter
@@ -27,8 +31,31 @@ class GPSActivity : AppCompatActivity() {
 
     private lateinit var locationClient: FusedLocationProviderClient
     private lateinit var locationText: TextView
+    private lateinit var toggleTrackingBtn: Button
     private val LOCATION_PERMISSION_REQUEST = 1001
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+    private val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault())
+
+    private val handler = Handler(Looper.getMainLooper())
+    private var isTracking = false
+    private val updateInterval = 1000L
+
+    private val locationRequest = LocationRequest.Builder(
+        Priority.PRIORITY_HIGH_ACCURACY,
+        1000L
+    ).apply {
+        setMinUpdateIntervalMillis(100)
+        setWaitForAccurateLocation(true)
+    }.build()
+
+    private val locationCallback = object : com.google.android.gms.location.LocationCallback() {
+        override fun onLocationResult(locationResult: com.google.android.gms.location.LocationResult) {
+            super.onLocationResult(locationResult)
+            locationResult.lastLocation?.let { location ->
+                updateLocationUI(location)
+                saveLocationToJson(formatLocationData(location))
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,17 +63,23 @@ class GPSActivity : AppCompatActivity() {
 
         locationText = findViewById(R.id.textView2)
         val backBtn: Button = findViewById(R.id.b)
-        val getLocationBtn: Button = findViewById(R.id.gps)
+        toggleTrackingBtn = findViewById(R.id.gps)
 
         locationClient = LocationServices.getFusedLocationProviderClient(this)
 
         backBtn.setOnClickListener {
+            stopLocationUpdates()
             startActivity(Intent(this, MenuActivity::class.java))
             finish()
         }
 
-        getLocationBtn.setOnClickListener {
-            checkPermissionsAndGetLocation()
+        toggleTrackingBtn.setOnClickListener {
+            if (isTracking) {
+                stopLocationUpdates()
+                toggleTrackingBtn.text = "Начать трекинг"
+            } else {
+                checkPermissionsAndGetLocation()
+            }
         }
     }
 
@@ -62,17 +95,15 @@ class GPSActivity : AppCompatActivity() {
 
         when {
             missingPermissions.isEmpty() -> {
-                // Все разрешения есть
-                getCurrentLocation()
+                startLocationUpdates()
+                toggleTrackingBtn.text = "Остановить трекинг"
             }
             missingPermissions.any { perm ->
                 ActivityCompat.shouldShowRequestPermissionRationale(this, perm)
             } -> {
-                // Показываем объяснение перед запросом
                 showPermissionExplanationDialog()
             }
             else -> {
-                // Запрашиваем разрешения
                 ActivityCompat.requestPermissions(
                     this,
                     missingPermissions.toTypedArray(),
@@ -82,60 +113,39 @@ class GPSActivity : AppCompatActivity() {
         }
     }
 
-    private fun showPermissionExplanationDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Необходимы разрешения")
-            .setMessage("Приложению нужны разрешения для:\n\n- Доступа к вашему местоположению\n- Сохранения данных в файл")
-            .setPositiveButton("Понятно") { _, _ ->
-                requestMissingPermissions()
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
-    }
-
-    private fun requestMissingPermissions() {
-        val requiredPermissions = arrayOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
-
-        val missingPermissions = requiredPermissions.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }.toTypedArray()
-
-        ActivityCompat.requestPermissions(
-            this,
-            missingPermissions,
-            LOCATION_PERMISSION_REQUEST
-        )
-    }
-
-    private fun getCurrentLocation() {
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-
-        locationClient.lastLocation.addOnSuccessListener { location ->
-            if (location != null) {
-                val locationData = formatLocationData(location)
-
-                locationText.text = """
-                    Широта: ${location.latitude}
-                    Долгота: ${location.longitude}
-                    Высота: ${location.altitude} м
-                    Время: ${dateFormat.format(Date(location.time))}
-                """.trimIndent()
-
-                saveLocationToJson(locationData)
-            } else {
-                locationText.text = "Не удалось получить местоположение"
-                Toast.makeText(this, "Местоположение недоступно", Toast.LENGTH_SHORT).show()
+    private fun startLocationUpdates() {
+        if (!isTracking) {
+            isTracking = true
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                locationClient.requestLocationUpdates(
+                    locationRequest,
+                    locationCallback,
+                    Looper.getMainLooper()
+                )
+                Toast.makeText(this, "Трекинг начат", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun stopLocationUpdates() {
+        if (isTracking) {
+            isTracking = false
+            locationClient.removeLocationUpdates(locationCallback)
+            Toast.makeText(this, "Трекинг остановлен", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun updateLocationUI(location: Location) {
+        locationText.text = """
+            Широта: ${"%.6f".format(location.latitude)}
+            Долгота: ${"%.6f".format(location.longitude)}
+            Высота: ${"%.1f".format(location.altitude)} м
+            Время: ${dateFormat.format(Date(location.time))}
+        """.trimIndent()
     }
 
     private fun formatLocationData(location: Location): JSONObject {
@@ -144,7 +154,7 @@ class GPSActivity : AppCompatActivity() {
             put("longitude", location.longitude)
             put("altitude", location.altitude)
             put("time", dateFormat.format(Date(location.time)))
-            put("accuracy", location.accuracy)
+            put("timestamp", System.currentTimeMillis())
         }
     }
 
@@ -158,11 +168,12 @@ class GPSActivity : AppCompatActivity() {
             val file = File(dir, "location_${System.currentTimeMillis()}.json")
             FileWriter(file).use { writer ->
                 writer.write(locationData.toString())
-                Toast.makeText(this, "Данные сохранены в: ${file.absolutePath}", Toast.LENGTH_LONG).show()
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(this, "Ошибка сохранения: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            runOnUiThread {
+                Toast.makeText(this, "Ошибка сохранения: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -178,7 +189,8 @@ class GPSActivity : AppCompatActivity() {
                 val allGranted = grantResults.all { it == PackageManager.PERMISSION_GRANTED }
 
                 if (allGranted) {
-                    getCurrentLocation()
+                    startLocationUpdates()
+                    toggleTrackingBtn.text = "Остановить трекинг"
                 } else {
                     val shouldShowRationale = permissions.any {
                         ActivityCompat.shouldShowRequestPermissionRationale(this, it)
@@ -198,10 +210,40 @@ class GPSActivity : AppCompatActivity() {
         }
     }
 
+    private fun showPermissionExplanationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Необходимы разрешения")
+            .setMessage("Для работы трекинга нужны:\n\n- Доступ к местоположению\n- Сохранение файлов")
+            .setPositiveButton("Запросить") { _, _ ->
+                requestMissingPermissions()
+            }
+            .setNegativeButton("Отмена") { _, _ ->
+                toggleTrackingBtn.text = "Начать трекинг"
+            }
+            .show()
+    }
+    private fun requestMissingPermissions() {
+        val requiredPermissions = arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        )
+
+        val missingPermissions = requiredPermissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }.toTypedArray()
+
+        if (missingPermissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(
+                this,
+                missingPermissions,
+                LOCATION_PERMISSION_REQUEST
+            )
+        }
+    }
     private fun showSettingsRedirectDialog() {
         AlertDialog.Builder(this)
-            .setTitle("Требуются разрешения")
-            .setMessage("Вы запретили запрос разрешений. Хотите открыть настройки, чтобы предоставить их?")
+            .setTitle("Разрешения отклонены")
+            .setMessage("Вы запретили запрос разрешений. Открыть настройки?")
             .setPositiveButton("Настройки") { _, _ ->
                 openAppSettings()
             }
@@ -214,5 +256,18 @@ class GPSActivity : AppCompatActivity() {
             data = Uri.fromParts("package", packageName, null)
         }
         startActivity(intent)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (isFinishing) {
+            stopLocationUpdates()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopLocationUpdates()
+        handler.removeCallbacksAndMessages(null)
     }
 }
