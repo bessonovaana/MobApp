@@ -67,7 +67,6 @@ class MainActivity2 : AppCompatActivity() {
         setupAudioManager()
         Permissions()
     }
-
     private fun initViews() {
         seekBar = findViewById(R.id.seekBar)
         volumeSeekBar = findViewById(R.id.voluem)
@@ -285,7 +284,6 @@ class MainActivity2 : AppCompatActivity() {
     }
     override fun onPause() {
         super.onPause()
-
         if (::mplayer.isInitialized && mplayer.isPlaying) {
             mplayer.pause()
         }
@@ -293,7 +291,6 @@ class MainActivity2 : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-
         if (::mplayer.isInitialized && !mplayer.isPlaying && PlPsBtn.text == "Pause") {
             mplayer.start()
             handler.post(updateSeekBar)
