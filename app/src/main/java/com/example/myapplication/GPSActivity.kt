@@ -107,17 +107,22 @@ class GPSActivity : AppCompatActivity() {
         }
         toggleTrackingBtn.post(object : Runnable {
             override fun run() {
+                val backgroundColor = colors[backgroundColorIndex % colors.size]
+                mainLayout.setBackgroundColor(backgroundColor)
+                backgroundColorIndex++
 
-                val now1 = System.currentTimeMillis()
-                if (now1 - lastMovingTime >= 500) {
+
+                val now = System.currentTimeMillis()
+                if (now - lastMovingTime >= 500) {
                     moving(toggleTrackingBtn, radius, angle)
-                    lastMovingTime = now1
+                    lastMovingTime = now
                     angle += Math.toRadians(5.0)
                 }
 
-
+                handler.postDelayed(this, 100)
             }
         })
+
     }
 
 
