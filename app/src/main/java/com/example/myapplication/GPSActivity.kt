@@ -38,22 +38,19 @@ class GPSActivity : AppCompatActivity() {
     private lateinit var locationText: TextView
     private lateinit var toggleTrackingBtn: Button
     private lateinit var mainLayout: ConstraintLayout
-    private val  start= System.currentTimeMillis()
+
     var backgroundColorIndex = 0
     var buttonColorIndex = 0
 
     private val LOCATION_PERMISSION_REQUEST = 1001
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault())
     val colors = listOf(Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW, Color.CYAN, Color.MAGENTA)
-    var colorIndex = 0
+
     var lastMovingTime = System.currentTimeMillis()
 
     private var isTracking = false
     private val handler = Handler(Looper.getMainLooper())
-    private var xPos=0f
-    private var yPos=0f
 
-    private var index=0
 
     val radius = 200f
     var angle = 0.0
@@ -122,7 +119,6 @@ class GPSActivity : AppCompatActivity() {
                     lastMovingTime = now
                     angle += Math.toRadians(5.0)
                 }
-
                 handler.postDelayed(this, 100)
             }
         })
