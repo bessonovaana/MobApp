@@ -111,7 +111,11 @@ class GPSActivity : AppCompatActivity() {
                 mainLayout.setBackgroundColor(backgroundColor)
                 backgroundColorIndex++
 
-
+                if (buttonColorIndex % 2 == 0) {
+                    val buttonColor = colors[buttonColorIndex % colors.size]
+                    toggleTrackingBtn.setBackgroundColor(buttonColor)
+                }
+                buttonColorIndex++
                 val now = System.currentTimeMillis()
                 if (now - lastMovingTime >= 500) {
                     moving(toggleTrackingBtn, radius, angle)
