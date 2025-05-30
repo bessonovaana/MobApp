@@ -81,6 +81,7 @@ class GPSActivity : AppCompatActivity() {
                 checkPermissionsAndGetLocation()
             }
         }
+
     }
 
     private fun checkPermissionsAndGetLocation() {
