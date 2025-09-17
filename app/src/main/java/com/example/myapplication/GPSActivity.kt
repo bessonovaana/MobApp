@@ -114,7 +114,7 @@ class GPSActivity : AppCompatActivity() {
                 }
                 buttonColorIndex++
                 val now = System.currentTimeMillis()
-                if (now - lastMovingTime >= 500) {
+                if (buttonColorIndex % 5 == 0) {
                     moving(toggleTrackingBtn, radius, angle)
                     lastMovingTime = now
                     angle += Math.toRadians(5.0)

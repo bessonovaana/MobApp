@@ -25,6 +25,7 @@ class MenuActivity : AppCompatActivity() {
         val button_cal: Button =findViewById(R.id.Calcul)
         val button_mp3: Button=findViewById(R.id.mp3)
         val button_gps: Button=findViewById(R.id.gps)
+        val button_socket: Button=findViewById(R.id.socket)
 
         button_cal.setOnClickListener{
             val intent = Intent(this, MainActivity::class.java)
@@ -36,6 +37,10 @@ class MenuActivity : AppCompatActivity() {
         }
         button_gps.setOnClickListener {
             val intent = Intent(this, GPSActivity::class.java)
+            startActivity(intent)
+        }
+        button_socket.setOnClickListener {
+            val intent = Intent(this, Socket::class.java)
             startActivity(intent)
         }
     }
