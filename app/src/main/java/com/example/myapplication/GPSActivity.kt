@@ -51,10 +51,6 @@ class GPSActivity : AppCompatActivity() {
     private var isTracking = false
     private val handler = Handler(Looper.getMainLooper())
 
-
-    val radius = 200f
-    var angle = 0.0
-
     private val locationRequest = LocationRequest.Builder(
         Priority.PRIORITY_HIGH_ACCURACY,
         1000L
@@ -104,38 +100,12 @@ class GPSActivity : AppCompatActivity() {
         }
         toggleTrackingBtn.post(object : Runnable {
             override fun run() {
-                val backgroundColor = colors[backgroundColorIndex % colors.size]
-                mainLayout.setBackgroundColor(backgroundColor)
-                backgroundColorIndex++
-
-                if (buttonColorIndex % 2 == 0) {
-                    val buttonColor = colors[buttonColorIndex % colors.size]
-                    toggleTrackingBtn.setBackgroundColor(buttonColor)
-                }
-                buttonColorIndex++
-                val now = System.currentTimeMillis()
-                if (buttonColorIndex % 5 == 0) {
-                    moving(toggleTrackingBtn, radius, angle)
-                    lastMovingTime = now
-                    angle += Math.toRadians(5.0)
-                }
                 handler.postDelayed(this, 100)
             }
         })
 
     }
 
-
-
-
-    private fun moving(button: Button, radius: Float, angle: Double) {
-        val centerX = (button.parent as View).width / 2f
-        val centerY = (button.parent as View).height / 2f
-        val newX = centerX + radius * Math.cos(angle).toFloat()
-        val newY = centerY + radius * Math.sin(angle).toFloat()
-        button.x = newX - button.width / 2
-        button.y = newY - button.height / 2
-    }
 
 
 

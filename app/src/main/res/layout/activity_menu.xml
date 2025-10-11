@@ -49,6 +49,9 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="socket"
-        tools:layout_editor_absoluteX="160dp"
-        tools:layout_editor_absoluteY="483dp" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/gps"
+        app:layout_constraintVertical_bias="0.153" />
 </androidx.constraintlayout.widget.ConstraintLayout>
