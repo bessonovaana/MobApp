@@ -5,53 +5,38 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MenuActivity"
-    android:background="@color/black"
-    android:layout_gravity="center">
+    tools:context=".Socket">
 
-    <Button
-        android:id="@+id/Calcul"
+    <TextView
+        android:id="@+id/tvSocket"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="248dp"
-        android:gravity="center"
-        android:text="Calculator"
+        android:text="Ответ сервара:"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.489"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <Button
-        android:id="@+id/mp3"
+        android:id="@+id/st"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="37dp"
-        android:gravity="center"
-        android:text="mp3 player"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/Calcul" />
-
-    <Button
-        android:id="@+id/gps"
-        android:layout_width="119dp"
-        android:layout_height="44dp"
-        android:gravity="center"
-        android:text="GPS"
+        android:text="Отправка сообщения на сервер"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/mp3"
-        app:layout_constraintVertical_bias="0.118" />
+        app:layout_constraintTop_toBottomOf="@+id/tvSocket"
+        app:layout_constraintVertical_bias="0.324" />
 
     <Button
-        android:id="@+id/socket"
+        android:id="@+id/bk"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="socket"
+        android:text="back"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.049"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/gps"
-        app:layout_constraintVertical_bias="0.153" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.023" />
 </androidx.constraintlayout.widget.ConstraintLayout>

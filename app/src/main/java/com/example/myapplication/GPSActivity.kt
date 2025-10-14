@@ -5,27 +5,22 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.location.Location
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
-import android.util.DisplayMetrics
-import android.view.View
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.constraintlayout.widget.ConstraintLayout
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import kotlinx.coroutines.Runnable
 import org.json.JSONObject
 import java.io.File
 import java.io.FileWriter
@@ -37,26 +32,12 @@ class GPSActivity : AppCompatActivity() {
     private lateinit var locationClient: FusedLocationProviderClient
     private lateinit var locationText: TextView
     private lateinit var toggleTrackingBtn: Button
-    private lateinit var mainLayout: ConstraintLayout
-    private val  start= System.currentTimeMillis()
-    var backgroundColorIndex = 0
-    var buttonColorIndex = 0
-
     private val LOCATION_PERMISSION_REQUEST = 1001
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault())
-    val colors = listOf(Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW, Color.CYAN, Color.MAGENTA)
-    var colorIndex = 0
-    var lastMovingTime = System.currentTimeMillis()
 
-    private var isTracking = false
     private val handler = Handler(Looper.getMainLooper())
-   private var xPos=0f
-    private var yPos=0f
-
-    private var index=0
-
-    val radius = 200f
-    var angle = 0.0
+    private var isTracking = false
+    private val updateInterval = 1000L
 
     private val locationRequest = LocationRequest.Builder(
         Priority.PRIORITY_HIGH_ACCURACY,
@@ -83,7 +64,6 @@ class GPSActivity : AppCompatActivity() {
         locationText = findViewById(R.id.textView2)
         val backBtn: Button = findViewById(R.id.b)
         toggleTrackingBtn = findViewById(R.id.gps)
-        mainLayout = findViewById(R.id.main)
 
         locationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -97,42 +77,11 @@ class GPSActivity : AppCompatActivity() {
             if (isTracking) {
                 stopLocationUpdates()
                 toggleTrackingBtn.text = "Начать трекинг"
-
             } else {
                 checkPermissionsAndGetLocation()
-
-
             }
-
         }
-        toggleTrackingBtn.post(object : Runnable {
-            override fun run() {
-
-                val now1 = System.currentTimeMillis()
-                if (now1 - lastMovingTime >= 500) {
-                    moving(toggleTrackingBtn, radius, angle)
-                    lastMovingTime = now1
-                    angle += Math.toRadians(5.0)
-                }
-
-
-            }
-        })
-        }
-
-
-
-
-    private fun moving(button: Button, radius: Float, angle: Double) {
-        val centerX = (button.parent as View).width / 2f
-        val centerY = (button.parent as View).height / 2f
-        val newX = centerX + radius * Math.cos(angle).toFloat()
-        val newY = centerY + radius * Math.sin(angle).toFloat()
-        button.x = newX - button.width / 2
-        button.y = newY - button.height / 2
     }
-
-
 
     private fun checkPermissionsAndGetLocation() {
         val requiredPermissions = arrayOf(
@@ -228,38 +177,6 @@ class GPSActivity : AppCompatActivity() {
         }
     }
 
-    private fun showPermissionExplanationDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("Необходимы разрешения")
-            .setMessage("Для работы трекинга нужны:\n\n- Доступ к местоположению\n- Сохранение файлов")
-            .setPositiveButton("Запросить") { _, _ ->
-                requestMissingPermissions()
-            }
-            .setNegativeButton("Отмена") { _, _ ->
-                toggleTrackingBtn.text = "Начать трекинг"
-            }
-            .show()
-    }
-
-    private fun requestMissingPermissions() {
-        val requiredPermissions = arrayOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
-
-        val missingPermissions = requiredPermissions.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }.toTypedArray()
-
-        if (missingPermissions.isNotEmpty()) {
-            ActivityCompat.requestPermissions(
-                this,
-                missingPermissions,
-                LOCATION_PERMISSION_REQUEST
-            )
-        }
-    }
-
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -293,6 +210,36 @@ class GPSActivity : AppCompatActivity() {
         }
     }
 
+    private fun showPermissionExplanationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Необходимы разрешения")
+            .setMessage("Для работы трекинга нужны:\n\n- Доступ к местоположению\n- Сохранение файлов")
+            .setPositiveButton("Запросить") { _, _ ->
+                requestMissingPermissions()
+            }
+            .setNegativeButton("Отмена") { _, _ ->
+                toggleTrackingBtn.text = "Начать трекинг"
+            }
+            .show()
+    }
+    private fun requestMissingPermissions() {
+        val requiredPermissions = arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        )
+
+        val missingPermissions = requiredPermissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }.toTypedArray()
+
+        if (missingPermissions.isNotEmpty()) {
+            ActivityCompat.requestPermissions(
+                this,
+                missingPermissions,
+                LOCATION_PERMISSION_REQUEST
+            )
+        }
+    }
     private fun showSettingsRedirectDialog() {
         AlertDialog.Builder(this)
             .setTitle("Разрешения отклонены")
