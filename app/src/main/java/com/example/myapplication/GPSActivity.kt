@@ -21,11 +21,17 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import org.zeromq.ZMQ // Исправлен импорт!
 import java.io.File
 import java.io.FileWriter
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.concurrent.thread
 
 class GPSActivity : AppCompatActivity() {
 
@@ -37,7 +43,6 @@ class GPSActivity : AppCompatActivity() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var isTracking = false
-    private val updateInterval = 1000L
 
     private val locationRequest = LocationRequest.Builder(
         Priority.PRIORITY_HIGH_ACCURACY,
@@ -52,7 +57,11 @@ class GPSActivity : AppCompatActivity() {
             super.onLocationResult(locationResult)
             locationResult.lastLocation?.let { location ->
                 updateLocationUI(location)
-                saveLocationToJson(formatLocationData(location))
+                saveLocationToJson(formatLocationData(location)) { filePath ->
+                    if (filePath != null) {
+                        sendToServer(filePath)
+                    }
+                }
             }
         }
     }
@@ -84,10 +93,7 @@ class GPSActivity : AppCompatActivity() {
     }
 
     private fun checkPermissionsAndGetLocation() {
-        val requiredPermissions = arrayOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
+        val requiredPermissions = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
 
         val missingPermissions = requiredPermissions.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
@@ -158,21 +164,54 @@ class GPSActivity : AppCompatActivity() {
         }
     }
 
-    private fun saveLocationToJson(locationData: JSONObject) {
-        try {
-            val dir = File(getExternalFilesDir(null), "LocationData")
-            if (!dir.exists()) {
-                dir.mkdirs()
-            }
+    private fun saveLocationToJson(locationData: JSONObject, onComplete: ((filePath: String?) -> Unit)) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val dir = File(getExternalFilesDir(null), "LocationData")
+                if (!dir.exists()) {
+                    dir.mkdirs()
+                }
 
-            val file = File(dir, "location_${System.currentTimeMillis()}.json")
-            FileWriter(file).use { writer ->
-                writer.write(locationData.toString())
+                val file = File(dir, "location_${System.currentTimeMillis()}.json")
+                FileWriter(file).use { writer ->
+                    writer.write(locationData.toString())
+                }
+
+                withContext(Dispatchers.Main) {
+                    onComplete(file.absolutePath)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@GPSActivity, "Ошибка сохранения: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                    onComplete(null)
+                }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            runOnUiThread {
-                Toast.makeText(this, "Ошибка сохранения: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun sendToServer(filePath: String) {
+        thread {
+            try {
+                val file = File(filePath)
+                val fileData = file.readBytes()
+                val context = ZMQ.context(1)
+                val socket = context.socket(ZMQ.REQ)
+
+                socket.connect("tcp://192.168.1.125:5000")
+                socket.send(fileData, 0)
+
+
+
+                socket.close()
+                context.term()
+
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                runOnUiThread {
+                    Toast.makeText(this@GPSActivity, "Ошибка отправки: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -213,7 +252,7 @@ class GPSActivity : AppCompatActivity() {
     private fun showPermissionExplanationDialog() {
         AlertDialog.Builder(this)
             .setTitle("Необходимы разрешения")
-            .setMessage("Для работы трекинга нужны:\n\n- Доступ к местоположению\n- Сохранение файлов")
+            .setMessage("Для работы трекинга нужен доступ к местоположению.")
             .setPositiveButton("Запросить") { _, _ ->
                 requestMissingPermissions()
             }
@@ -222,28 +261,19 @@ class GPSActivity : AppCompatActivity() {
             }
             .show()
     }
+
     private fun requestMissingPermissions() {
-        val requiredPermissions = arrayOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+            LOCATION_PERMISSION_REQUEST
         )
-
-        val missingPermissions = requiredPermissions.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }.toTypedArray()
-
-        if (missingPermissions.isNotEmpty()) {
-            ActivityCompat.requestPermissions(
-                this,
-                missingPermissions,
-                LOCATION_PERMISSION_REQUEST
-            )
-        }
     }
+
     private fun showSettingsRedirectDialog() {
         AlertDialog.Builder(this)
             .setTitle("Разрешения отклонены")
-            .setMessage("Вы запретили запрос разрешений. Открыть настройки?")
+            .setMessage("Вы запретили доступ к местоположению. Открыть настройки приложения?")
             .setPositiveButton("Настройки") { _, _ ->
                 openAppSettings()
             }
@@ -258,16 +288,11 @@ class GPSActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    override fun onPause() {
-        super.onPause()
-        if (isFinishing) {
-            stopLocationUpdates()
-        }
-    }
-
     override fun onDestroy() {
         super.onDestroy()
-        stopLocationUpdates()
         handler.removeCallbacksAndMessages(null)
+        if (isTracking) {
+            stopLocationUpdates()
+        }
     }
 }
