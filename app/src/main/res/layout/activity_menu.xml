@@ -13,7 +13,7 @@
         android:id="@+id/Calcul"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="248dp"
+        android:layout_marginTop="176dp"
         android:gravity="center"
         android:text="Calculator"
         app:layout_constraintEnd_toEndOf="parent"
@@ -25,7 +25,7 @@
         android:id="@+id/mp3"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="37dp"
+        android:layout_marginTop="32dp"
         android:gravity="center"
         android:text="mp3 player"
         app:layout_constraintEnd_toEndOf="parent"
@@ -42,7 +42,18 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/mp3"
-        app:layout_constraintVertical_bias="0.118" />
+        app:layout_constraintVertical_bias="0.07" />
+    <Button
+        android:id="@+id/telecpony"
+        android:layout_width="119dp"
+        android:layout_height="44dp"
+        android:gravity="center"
+        android:text="Telephony"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/gps"
+        app:layout_constraintVertical_bias="0.07" />
 
     <Button
         android:id="@+id/socket"
@@ -51,7 +62,8 @@
         android:text="socket"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/gps"
-        app:layout_constraintVertical_bias="0.153" />
+        app:layout_constraintTop_toBottomOf="@+id/telecpony"
+        app:layout_constraintVertical_bias="0.095" />
 </androidx.constraintlayout.widget.ConstraintLayout>
