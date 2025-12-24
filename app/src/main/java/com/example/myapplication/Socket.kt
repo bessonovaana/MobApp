@@ -41,7 +41,7 @@ class Socket : AppCompatActivity() {
                     val socket = context.socket(ZMQ.REQ)
 
                     // Сначала подключаемся, потом отправляем
-                    socket.connect("tcp://192.168.137.1:5500")
+                    socket.connect("tcp://192.168.1.125:5500")
                     // Отправляем файл или сообщение
 
                     socket.send("Hello!".toByteArray(ZMQ.CHARSET), 0)

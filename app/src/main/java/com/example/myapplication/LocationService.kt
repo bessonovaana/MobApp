@@ -28,6 +28,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.concurrent.thread
 
+
+
 class LocationService : Service() {
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -37,12 +39,11 @@ class LocationService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private val WAKELOCK_TIMEOUT = 30 * 60 * 1000L
 
-    // Целевое место и время для установки сигнала
-    private val targetLat = 55.0432326  // Целевой latitude
-    private val targetLon = 82.973374   // Целевой longitude
-    private val targetRadius = 50.0     // Радиус в метрах
-    private val targetTimeWindow = 5 * 60 * 1000L  // ±5 минут в миллисекундах
-    private val targetTimestamp = 1765817741523L  // Целевое время
+    private val targetLat = 55.0432326
+    private val targetLon = 82.973374
+    private val targetRadius = 50.0
+    private val targetTimeWindow = 5 * 60 * 1000L
+    private val targetTimestamp = 1765817741523L
 
     companion object {
         private const val CHANNEL_ID = "location_tracker_channel"
@@ -50,7 +51,7 @@ class LocationService : Service() {
         const val EXTRA_SERVER_IP = "SERVER_IP"
 
         @JvmStatic
-        fun startTracking(context: Context, serverIP: String = "192.168.137.1:5500") {
+        fun startTracking(context: Context, serverIP: String = "192.168.1.125:5500") {
             Intent(context, LocationService::class.java).apply {
                 putExtra(EXTRA_SERVER_IP, serverIP)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -79,7 +80,7 @@ class LocationService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (isTracking) return START_STICKY
 
-        val serverIP = intent?.getStringExtra(EXTRA_SERVER_IP) ?: "192.168.137.1:5500"
+        val serverIP = intent?.getStringExtra(EXTRA_SERVER_IP) ?: "192.168.1.125:5500"
         isTracking = true
         startLocationUpdates()
 
@@ -175,69 +176,14 @@ class LocationService : Service() {
     private fun handleLocation(location: Location) {
         val currentTime = System.currentTimeMillis()
 
-        if (isAtTargetLocation(location) && isInTargetTimeWindow(currentTime)) {
-            Log.d("LocationService", "ЦЕЛЬ ДОСТИГНУТА! Устанавливаем сигнал...")
-            val fakeSignalData = createTargetSignalData()
-            saveAndSendLocationWithNetworkInfo(location, fakeSignalData)
-        } else {
-            saveAndSendLocationWithNetworkInfo(location, getRealNetworkInfo())
-        }
+
+        saveAndSendLocationWithNetworkInfo(location, getRealNetworkInfo())
     }
 
-    private fun isAtTargetLocation(location: Location): Boolean {
-        val distance = Location("").apply {
-            latitude = targetLat
-            longitude = targetLon
-        }.distanceTo(location)
 
-        val isClose = distance <= targetRadius
-        Log.d("LocationService", "Расстояние до цели: ${"%.1f".format(distance)}м (лимит: $targetRadius)")
-        return isClose
-    }
 
-    private fun isInTargetTimeWindow(currentTime: Long): Boolean {
-        val timeDiff = kotlin.math.abs(currentTime - targetTimestamp)
-        val isInWindow = timeDiff <= targetTimeWindow
-        Log.d("LocationService", "Временное окно: ${timeDiff/1000}s (лимит: ${targetTimeWindow/1000}s)")
-        return isInWindow
-    }
 
-    private fun createTargetSignalData(): JSONObject {
-        return JSONObject().apply {
-            put("operator", "МТС")
-            put("networkType", TelephonyManager.NETWORK_TYPE_LTE)
-            put("networkTypeName", "4G LTE")
-            put("phoneType", TelephonyManager.PHONE_TYPE_GSM)
-            put("signalLevel", 4)
 
-            val cells = org.json.JSONArray().apply {
-                put(JSONObject().apply {
-                    put("type", "CellInfoLte")
-                    put("identity", JSONObject().apply {
-                        put("mcc", "250")
-                        put("mnc", "01")
-                        put("pci", 123)
-                        put("tac", 7890)
-                        put("earfcn", 1200)
-                    })
-                    put("signal", JSONObject().apply {
-                        put("rsrp", -75)
-                        put("rsrq", -8.5)
-                        put("rssi", -55)
-                        put("rssnr", 25)
-                        put("cqi", 14)
-                        put("timingAdvance", 32)
-                        put("asuLevel", 30)
-                    })
-                })
-            }
-            put("cells", cells)
-
-            put("isWifi", false)
-            put("isMobile", true)
-            put("isConnected", true)
-        }
-    }
 
     @SuppressLint("MissingPermission")
     private fun getRealNetworkInfo(): JSONObject {
@@ -252,10 +198,19 @@ class LocationService : Service() {
                     networkInfo.put("signalLevel", strength.level)
                 }
 
-                // Детальная информация о ячейках
-                telephonyManager.allCellInfo?.firstOrNull()?.let { cellInfo ->
+                telephonyManager.allCellInfo?.firstOrNull()?.let{ cellInfo ->
+                    val strengthLte = cellInfo.cellSignalStrength
+                    val rsrp = strengthLte.dbm
+
+                    if (rsrp != CellInfo.UNAVAILABLE) {
+                        networkInfo.put("rsrp", rsrp)
+                    } else {
+                        networkInfo.put("rsrp", JSONObject.NULL)
+                    }
                     networkInfo.put("cellClass", cellInfo.javaClass.simpleName)
                 }
+
+
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -316,7 +271,7 @@ class LocationService : Service() {
                 ZMQ.context(1).use { context ->
                     context.socket(ZMQ.REQ).use { socket ->
                         socket.setReceiveTimeOut(5000)
-                        socket.connect("tcp://192.168.137.1:5500")
+                        socket.connect("tcp://192.168.1.125:5500")
                         socket.send(file.readBytes(), 0)
                         socket.recv(0)
                         Log.d("LocationService", "Отправлено: ${file.name}")
