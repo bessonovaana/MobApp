@@ -7,10 +7,7 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import org.zeromq.ZMQ
-import java.io.File
 import kotlin.concurrent.thread
 
 
@@ -26,13 +23,13 @@ class Socket : AppCompatActivity() {
         val responseText = findViewById<TextView>(R.id.tvSocket)
         val button_b: Button = findViewById(R.id.bk)
 
-
         button_b.setOnClickListener {
             val intent = Intent(this, MenuActivity::class.java)
             startActivity(intent)
             finish()
 
         }
+        //circ(button_b)
 
         sendButton.setOnClickListener {
             thread {
@@ -40,9 +37,8 @@ class Socket : AppCompatActivity() {
                     val context = ZMQ.context(2)
                     val socket = context.socket(ZMQ.REQ)
 
-                    // Сначала подключаемся, потом отправляем
                     socket.connect("tcp://192.168.1.125:5500")
-                    // Отправляем файл или сообщение
+
 
                     socket.send("Hello!".toByteArray(ZMQ.CHARSET), 0)
 
@@ -61,6 +57,7 @@ class Socket : AppCompatActivity() {
             }
         }
     }
+
     override fun onPause() {
         super.onPause()
     }

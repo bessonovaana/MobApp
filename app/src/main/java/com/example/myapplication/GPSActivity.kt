@@ -27,7 +27,6 @@ class GPSActivity : AppCompatActivity() {
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault())
     private var isTracking = false
 
-    // Для периодического обновления UI
     private val handler = Handler(Looper.getMainLooper())
     private val updateRunnable = object : Runnable {
         override fun run() {

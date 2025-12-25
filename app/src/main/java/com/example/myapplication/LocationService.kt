@@ -41,9 +41,7 @@ class LocationService : Service() {
 
     private val targetLat = 55.0432326
     private val targetLon = 82.973374
-    private val targetRadius = 50.0
-    private val targetTimeWindow = 5 * 60 * 1000L
-    private val targetTimestamp = 1765817741523L
+
 
     companion object {
         private const val CHANNEL_ID = "location_tracker_channel"
@@ -133,7 +131,7 @@ class LocationService : Service() {
     private fun createForegroundNotification() {
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Трекинг активен")
-            .setContentText("Местоположение + сеть (цель: $targetLat, $targetLon)")
+            .setContentText("Местоположение + сеть")
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
