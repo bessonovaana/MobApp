@@ -1,0 +1,6 @@
+[submodule "socet"]
+	path = socet
+	url = git@github.com:bessonovaana/socet.git
+[submodule "socket"]
+	path = socket
+	url = git@github.com:bessonovaana/socket.git
